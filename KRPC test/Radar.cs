@@ -187,6 +187,7 @@ namespace KRPC_test
 			}
 			OnDecision?.Invoke();
 
+
 		}
 		///// <summary>
 		///// Calculate time before the impact.

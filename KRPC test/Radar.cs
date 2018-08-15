@@ -78,13 +78,7 @@ namespace KRPC_test
 			return VectorMath.TupleToVector(body.SurfacePosition(latitude, longitude, bodyFrame));
 
 		}
-		//public static Tuple<double,double> LandingSpotLatLang()
-		//{
-		//	Tuple<double, double, double> landingPos = VectorMath.Add(position.Get(), VectorMath.MultiplyByNumber(velStream.Get(), RealTimeToImpact())); //predicted landing spot with no regard of surface elevation
-		//	double latitude = body.LatitudeAtPosition(landingPos, body.ReferenceFrame);
-		//	double longitude = body.LongitudeAtPosition(landingPos, body.ReferenceFrame);
-		//	return Tuple.Create(latitude, longitude);
-		//}
+		
 		public static Tuple<double, double> LandingSpotLatLang()
 		{
 			Tuple<double, double, double> landingPos = position.Get(); //predicted landing spot with no regard of surface elevation
@@ -112,7 +106,7 @@ namespace KRPC_test
 			latitude = latLan.Item1 + 0.5 / 60 / 60 * spread;
 			longitude = latLan.Item2 - Math.Sqrt(3) / 4 / 60 / 60 * spread;
 			Vector3 spotThreePosition = VectorMath.TupleToVector(body.SurfacePosition(latitude, longitude, body.ReferenceFrame));
-
+			//These vectors represent the sides of an equilateral triangle. The first two are for setting a normal. The third vector is only needed for visualization.
 			Vector3 v1 = spotTwoPosition - spotOnePosition;
 			Vector3 v2 = spotThreePosition - spotOnePosition;
 			Vector3 v3 = spotThreePosition - spotTwoPosition;
@@ -121,14 +115,14 @@ namespace KRPC_test
 			VectorMath.Visualize(conn, spotOnePosition, spotOnePosition + v2, bodyFrame);
 			VectorMath.Visualize(conn, spotTwoPosition, spotTwoPosition + v3, bodyFrame);
 
-			return Vector3.Cross(v1, v2);
+			return Vector3.Cross(v1, v2); //normal to the surface that v1 and v2 lie on.
 		}
 		public static double Slope(Vector3 surfaceNormal, Tuple<double, double> latLan)
 		{
 			Vector3 n1 = surfaceNormal;
 			double latitude = latLan.Item1;
 			double longitude = latLan.Item2;
-			//Mean See level
+			//Same as above but for mean Sea level
 			Tuple<double, double, double> landingSpotMSL = body.MSLPosition(latitude, longitude, body.ReferenceFrame);
 			//Spot 1
 			latitude += 1 / 60 / 60 * 20;
@@ -147,7 +141,7 @@ namespace KRPC_test
 			Vector3 v2MSL = spotThreePositionMSL - spotOnePositionMSL;
 
 
-			Vector3 n2 = Vector3.Cross(v1MSL, v2MSL);
+			Vector3 n2 = Vector3.Cross(v1MSL, v2MSL); // normal to the sea surface
 			return VectorMath.Angle(n1, n2);
 		}
 
@@ -175,7 +169,6 @@ namespace KRPC_test
 		{
 			Vector3 distanceToImpact = 10 * Vector3.UnitX;
 			double distanceToBurn = 0;
-			double trajectoryLength = 10;
 			Vector3 velocity;
 			Vector3 vesselPosition;
 			while (distanceToBurn < distanceToImpact.Length())
@@ -187,17 +180,7 @@ namespace KRPC_test
 				Vector3 dist = vesselPosition - RealImpactPos();
 				distanceToImpact = (velocity) * RealTimeToImpact();
 				double halfCos = Math.Cos(VectorMath.Angle(distanceToImpact, -velocity) / 2);
-				//Rough approximation of trajectory length
-				//if (cosine > 0)
-				//{
-				//	trajectoryLength = distanceToImpact.Length() /*/ cosine*/;
-
-				//}
-				//else
-				//{
-				//	trajectoryLength = distanceToImpact.Length();
-				//}
-				//Output.Line(trajectoryLength, 1);
+				
 				Output.Line((distanceToImpact.Length()), 1);
 				Output.Line(distanceToBurn, 2);
 				Output.Line(dist.Length(), 4);

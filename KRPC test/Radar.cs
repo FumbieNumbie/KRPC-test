@@ -20,11 +20,11 @@ namespace KRPC_test
 		private static readonly ReferenceFrame bodyFrame = body.ReferenceFrame;
 		private static Stream<Tuple<double, double, double>> velStream = conn.AddStream(() => vessel.Flight(bodyFrame).Velocity);
 		private static Stream<Tuple<double, double, double>> dragStream = conn.AddStream(() => vessel.Flight(bodyFrame).Drag);
-
 		private static Stream<double> velVStream = conn.AddStream(() => vessel.Flight(bodyFrame).VerticalSpeed);
 		private static Stream<double> altStream = conn.AddStream(() => vessel.Flight(bodyFrame).MeanAltitude);
-
 		private static Stream<Tuple<double, double, double>> position = conn.AddStream(() => vessel.Position(bodyFrame));
+
+
 		/// <summary>
 		/// Calculate time before the impact.
 		/// </summary>
@@ -53,7 +53,7 @@ namespace KRPC_test
 		/// <returns></returns>
 		public static double BurnDistance()
 		{
-			Vector3 velocity = VectorMath.TupleToVector(velStream.Get()) + 1f * VectorMath.TupleToVector(dragStream.Get());
+			Vector3 velocity = VectorMath.TupleToVector(velStream.Get()) + 0.001f * VectorMath.TupleToVector(dragStream.Get());
 			return velocity.Length() * velocity.Length() / Physics.MaxA() + 50;
 		}
 		/// <summary>
@@ -81,7 +81,8 @@ namespace KRPC_test
 		
 		public static Tuple<double, double> LandingSpotLatLang()
 		{
-			Tuple<double, double, double> landingPos = position.Get(); //predicted landing spot with no regard of surface elevation
+			Tuple<double, double, double> distanceToTravel = VectorMath.MultiplyByNumber(velStream.Get(), RealTimeToImpact());
+			Tuple<double, double, double> landingPos = VectorMath.Add(distanceToTravel, position.Get()); //predicted landing spot with no regard of surface elevation
 			double latitude = body.LatitudeAtPosition(landingPos, body.ReferenceFrame);
 			double longitude = body.LongitudeAtPosition(landingPos, body.ReferenceFrame);
 			return Tuple.Create(latitude, longitude);
@@ -93,8 +94,8 @@ namespace KRPC_test
 			double longitude = latLan.Item2;
 			//predicted landing spot with regard of surface elevation
 			Tuple<double, double, double> landingSpot = body.SurfacePosition(latitude, longitude, body.ReferenceFrame);
+			double spread = 3; //How far away the measures will be taken. Affects precision.
 			//Spot 1
-			double spread = 20;
 			latitude = latLan.Item1;
 			longitude = latLan.Item2 + Math.Sqrt(3) / 4 / 60 / 60 * spread;
 			Vector3 spotOnePosition = VectorMath.TupleToVector(body.SurfacePosition(latitude, longitude, body.ReferenceFrame));
@@ -181,92 +182,16 @@ namespace KRPC_test
 				distanceToImpact = (velocity) * RealTimeToImpact();
 				double halfCos = Math.Cos(VectorMath.Angle(distanceToImpact, -velocity) / 2);
 				
-				Output.Line((distanceToImpact.Length()), 1);
-				Output.Line(distanceToBurn, 2);
-				Output.Line(dist.Length(), 4);
+				Output.Print(Math.Round(distanceToImpact.Length()) + " | "+ Math.Round(distanceToBurn,2),3);
+				//Output.Print(distanceToBurn, 2);
+				Output.Print("distance to impact " + dist.Length(),4);
+				Output.Print("drag " + Math.Round(VectorMath.Length(dragStream.Get())),5);
 			}
 			OnDecision?.Invoke();
 
 
 		}
-		///// <summary>
-		///// Calculate time before the impact.
-		///// </summary>
-		///// <returns>Time in seconds</returns>
-		//public static float ImpactTime()
-		//{
-		//	double velV = vessel.Flight(refFrame).VerticalSpeed;
-		//	double altitude = vessel.Flight(refFrame).MeanAltitude;
-		//	double downAcc = Physics.DownAcc();
-		//	return (float)((velV + Math.Sqrt(velV * velV + 2 * altitude * downAcc)) / Math.Max(downAcc, 0.001));
-		//}
-		///// <summary>
-		///// Calculate time before the impact with respect of surface elevation.
-		///// </summary>
-		///// <param name="realAltitude"></param>
-		///// <returns>Time in seconds</returns>
-		//public static double RealImpactTime(double realAltitude)
-		//{
-		//	double velV = vessel.Flight(refFrame).VerticalSpeed;
-		//	double downAcc = Physics.DownAcc();
-
-		//	return (velV + Math.Sqrt(velV * velV + 2 * realAltitude * downAcc)) / Math.Max(downAcc, 0.001);
-		//}
-		///// <summary>
-		///// Calculates a distance needed to slow down
-		///// </summary>
-		///// <returns></returns>
-		//public static double BurnDistance()
-		//{
-		//	Vector3 velocity = VectorMath.TupleToVector(vessel.Flight(refFrame).Velocity);
-		//	return velocity.Length() * velocity.Length() / Physics.MaxA();
-		//}
-		///// <summary>
-		///// Calculates an impact position based on velocity and maximum acceleration. 
-		///// </summary>
-		///// <returns></returns>
-		//public static Vector3 ImpactPos()
-		//{
-		//	Vector3 vesselPosition = VectorMath.TupleToVector(vessel.Position(refFrame));
-		//	Vector3 velocity = VectorMath.TupleToVector(vessel.Flight(refFrame).Velocity);
-		//	return vesselPosition + velocity * ImpactTime();
-		//}
-		///// <summary>
-		///// Gets a surface position at an impact location.
-		///// </summary>
-		///// <returns>Returns a vector of the real landing position</returns>
-		//private static Vector3 RealImpactPos()
-		//{
-		//	Vector3 vesselPosition = VectorMath.TupleToVector(vessel.Position(refFrame));
-
-		//	Vector3 newPosition = ImpactPos();
-		//	double latitude = body.LatitudeAtPosition(VectorMath.VectorToTuple(newPosition), refFrame);
-		//	double longitude = body.LongitudeAtPosition(VectorMath.VectorToTuple(newPosition), refFrame);
-		//	return VectorMath.TupleToVector(body.SurfacePosition(latitude, longitude, refFrame));
-
-		//}
-		/// <summary>
-		/// Compare the distance needed to slow down to remaining distance. If the distance to slow down is higher, call an event handler.
-		/// </summary>
-		//private static void DecideWhenToBurn()
-		//{
-		//	double distanceToImpact = 10;
-		//	double distanceToBurn = 0;
-		//	Vector3 velocity;
-		//	Vector3 vesselPosition;
-		//	while (distanceToBurn*1.3 < distanceToImpact)
-		//	{
-		//		velocity = VectorMath.TupleToVector(vessel.Flight(refFrame).Velocity);
-		//		vesselPosition = VectorMath.TupleToVector(vessel.Position(refFrame));
-
-		//		distanceToBurn = BurnDistance();
-		//		distanceToImpact = vesselPosition.Length() - RealImpactPos().Length();
-		//		Output.Line(distanceToImpact, 1);
-		//		Output.Line(distanceToBurn, 2);
-		//	}
-		//	OnDecision?.Invoke();
-
-		//}
+	
 		public delegate void DecisionHandler();
 		public static event DecisionHandler OnDecision;
 		/// <summary>

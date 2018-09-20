@@ -3,7 +3,6 @@ using KRPC.Client.Services.Drawing;
 using KRPC.Client.Services.SpaceCenter;
 using System;
 using System.Numerics;
-using System.Threading.Tasks;
 
 namespace KRPC_test
 {
@@ -266,7 +265,6 @@ namespace KRPC_test
 
 			//conn.Drawing().Clear();
 		}
-
-
+		
 	}
 }

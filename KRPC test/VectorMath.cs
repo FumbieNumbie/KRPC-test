@@ -265,6 +265,28 @@ namespace KRPC_test
 
 			//conn.Drawing().Clear();
 		}
-		
+		/// <summary>
+		/// Check if given tuples are equal withing specified tolerance
+		/// </summary>
+		/// <param name="t1">First tuple.</param>
+		/// <param name="t2">Second tuple.</param>
+		/// <param name="tolerance">Tolerance in meters/10.</param>
+		/// <returns>bool</returns>
+		public static bool TuplesAreEqual(Tuple<double, double, double> t1, Tuple<double, double, double> t2, int tolerance)
+		{
+			double itemDifference = Math.Abs(t1.Item3 - t2.Item3);
+			Output.Print(itemDifference , 6);
+			if (Math.Abs(t1.Item1 - t2.Item1) / t1.Item1 < tolerance / 10 && Math.Abs(t1.Item2 - t2.Item2) / t1.Item2 < tolerance / 10 && Math.Abs(t1.Item3 - t2.Item3) / t1.Item3 < tolerance / 10)
+			{
+
+				return true;
+
+			}
+			else
+			{
+				return false;
+			}
+		}
+
 	}
 }

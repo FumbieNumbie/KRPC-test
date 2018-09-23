@@ -1,5 +1,6 @@
 ﻿using Compute;
 using KRPC.Client;
+using KRPC.Client.Services.Drawing;
 using KRPC.Client.Services.SpaceCenter;
 using System;
 using System.Collections.Generic;
@@ -67,40 +68,61 @@ namespace KRPC_test
 			vessel.AutoPilot.Engage();
 			vessel.AutoPilot.ReferenceFrame = vessel.SurfaceReferenceFrame;
 			vessel.AutoPilot.TargetDirection = VectorMath.VectorToTuple(Vector3.UnitX);
-			//Tuple<double, double, double> targetHeading = VectorMath.Normalize(vessel.Flight(padRef).Direction);
-			//Test
-			/*
-			Vector3 newPosition = Vector3.Zero;
+			Tuple<double, double, double> steeringDir = Tuple.Create(.0, .0, .0);
+
+			//vessel.AutoPilot.TargetPitchAndHeading(45, 270);
+			//vessel.Control.Throttle = 1;
+
+			//System.Threading.Thread.Sleep(5000);
+			//vessel.AutoPilot.TargetDirection = VectorMath.VectorToTuple(Vector3.UnitX);
+			//vessel.Control.Throttle = 0;
+
+
 			PID.RunInNewThread(thrust, mass, velVStream, vessel);
-			DoLanding(conn, vessel, surfVelFrame);
-			vessel.Control.Throttle = 0;
-			Environment.Exit(0);
-			*/
-			//foreach (var part in vessel.Parts.All)
-			//{
-			//	if (part.Parachute != null)
-			//	{
-			//		Console.WriteLine(part.Parachute.State.ToString());
-			//	}
-			//}
+
+			Start:
 			PID.Enabled = true;
-			PID.RunInNewThread(thrust, mass, velVStream, vessel);
 
-			PID.SetPoint = 0;
-			while (true)
+			//PID.SetPoint = -3;
+			DoLanding(conn, vessel, surfVelFrame);
+			while (vessel.Situation.ToString() != "Landed")
 			{
-				Tuple<double, double, double> position = posStream.Get();
-				Tuple<double, double> latLan = Tuple.Create(body.LatitudeAtPosition(position, body.ReferenceFrame), body.LongitudeAtPosition(position, body.ReferenceFrame));
-				Vector3 surfaceNormal = Radar.SurfaceNormal(latLan);
-				Output.Print("Slope: " + Radar.Slope(surfaceNormal, latLan), 1);
-				//Output.Print(posStream.Get(), 1);
-				//Output.Print(velStream.Get(), 2);
-				//Output.Print(velVStream.Get(), 1,3);
-				//Output.Print(surfElevation.Get(), 4);
-				//Output.Print(altStream.Get(), 5);
-				System.Threading.Thread.Sleep(100);
-			}
+				var velocity = velStream.Get();
+				//Manage steering
+				steeringDir = HoverslamSteering(conn, vessel, surfVelFrame);
+				vessel.AutoPilot.TargetDirection = steeringDir;
+				//Define position variables
+				var position = posStream.Get();
+				var predictedPos = Physics.FuturePosition(position, velocity, Radar.ImpactTime());
+				//Slope
+				var surfaceNormal = Radar.SurfaceNormal(predictedPos);
+				var slope = Radar.Slope(surfaceNormal, position);
+				//Visualize landing spot
+				Vector3 norm = Radar.MSLNormal(position);
+				Tuple<double, double> predictedLatLon = Tuple.Create(body.LatitudeAtPosition(predictedPos, bodyFrame), body.LongitudeAtPosition(predictedPos, bodyFrame));
+				Vector3 landingSpot = VectorMath.TupleToVector(body.SurfacePosition(predictedLatLon.Item1, predictedLatLon.Item2, bodyFrame));
+				Tuple<double, double> currentLatLon = Tuple.Create(body.LatitudeAtPosition(position, bodyFrame), body.LongitudeAtPosition(position, bodyFrame));
+				VectorMath.Visualize(conn, landingSpot, landingSpot + 50 * norm, bodyFrame);
+				//Output
+				Output.Print(slope, 1);
+				//Save fuel and run hoverslam again if the first time was an overshoot.
+				if (Radar.RealAltitude() > 75 && VectorMath.Length(velocity) < 6)
+				{
+					PID.SetPoint = -35;
+					PID.Enabled = false;
+					goto Start;
 
+				}
+				//Console.Clear();
+				System.Threading.Thread.Sleep(100);
+				conn.Drawing().Clear();
+			}
+			Console.Clear();
+			PID.SetPoint = -20;
+			PID.Enabled = false;
+			vessel.Control.Throttle = 0;
+			System.Threading.Thread.Sleep(500);
+			Environment.Exit(0);
 		}
 
 		private static void DoLanding(Connection conn, Vessel vessel, ReferenceFrame surfVelFrame)
@@ -108,22 +130,7 @@ namespace KRPC_test
 			//Land using last second burn
 			Radar.RunDeciderInNewThread();
 			Radar.OnDecision += DoHoverSlam;
-			//PID.SetPoint = 0;
-			PID.Enabled = true;
-			while (vessel.Situation.ToString() != "Landed")
-			{
-				Tuple<double, double, double> steeringDir = Tuple.Create(.0, .0, .0);
-				steeringDir = HoverslamSteering(conn, vessel, surfVelFrame);
-				Tuple<double, double> latLan = Radar.LandingSpotLatLang();
-				Vector3 normal = Radar.SurfaceNormal(latLan);
-				double slope = Math.Round(Radar.Slope(normal, latLan), 2);
-				vessel.AutoPilot.TargetDirection = steeringDir;
-				//VectorMath.Visualize(conn, normal, surfFrame);
-				Output.Print("Slope: " + slope + "  ",5,1);
-				//Output.Print(PID.SetPoint + "  ");
-			}
-			PID.SetPoint = -0.1;
-			PID.Enabled = false;
+
 		}
 
 
@@ -142,7 +149,7 @@ namespace KRPC_test
 			}
 			else
 			{
-				vessel.AutoPilot.ReferenceFrame = referenceFrame;
+				vessel.AutoPilot.ReferenceFrame = vessel.SurfaceVelocityReferenceFrame;
 				steeringDirVec = -Vector3.UnitY/*-0.1f*prograde*/;
 			}
 
@@ -235,7 +242,7 @@ namespace KRPC_test
 			return state;
 		}
 
-		
+
 
 
 
@@ -456,50 +463,3 @@ namespace KRPC_test
 		}
 	}
 }
-/*while (vessel.Situation.ToString() != "Landed")
-			{
-				////OUTPUT
-				//Output.Print("steering vector: " + steeringDir + "   ", 1);
-				//Output.Print("State: " + state + "              ", 2);
-				Output.Print("Distance from Target: " + Math.Round(groundDist, 1) + "   ", 3);
-				Output.Print("Predicted distance: " + Math.Round(anticipatedDist.Length(), 1) + "   ", 3, 40);
-				Output.Print("PID setpoint: " + PID.SetPoint + "  ", 4);
-				Output.Print("Vessel state: " + vessel.Situation + "   ", 5);
-				//VectorMath.Visualize(conn, (float)timeToTarget * groundVelVec + Vector3.UnitX, (float)timeToTarget * groundVelVec, vessel.SurfaceReferenceFrame);
-				//Vectors
-				Vector3 dirVector = VectorMath.TupleToVector(vessel.Flight(padRef).Direction);
-				groundVelVec = VectorMath.GetGroundVector(velStream.Get());
-				groundDistVec = VectorMath.GetGroundVector(launchPadPos) - VectorMath.GetGroundVector(posStream.Get());
-				groundDist = groundDistVec.Length();
-				dir = Vector3.Dot(groundDistVec, groundVelVec) / Math.Abs(Vector3.Dot(groundDistVec, groundVelVec));
-				anticipatedDist = (groundDistVec - (float)timeToTarget * groundVelVec);
-				//Control
-				timeToTarget = groundDist / groundVelVec.Length();
-				altitude = altStream.Get();
-				realAltitude = altitude - surfElevation.Get();
-				vessel.AutoPilot.TargetDirection = steeringDir;
-				GetSteeringVector(out state, groundDist, groundVelVec, groundDistVec, out steeringDir, dir);
-				if (realAltitude > 150)
-				{
-
-					if (anticipatedDist.Length() > 2)
-					{
-						PID.SetPoint = 0;
-					}
-					else
-					{
-						Land(state, realAltitude);
-					}
-				}
-				else
-				{
-					if (anticipatedDist.Length() > 2)
-					{
-						PID.SetPoint = 0;
-					}
-					else
-					{
-						Land(state, realAltitude);
-					}
-				}
-			}*/

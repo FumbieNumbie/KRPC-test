@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Numerics;
-
+﻿using KRPC.Client;
 using KRPC.Client.Services.SpaceCenter;
+using System;
+using System.Numerics;
 using System.Threading;
-using KRPC.Client;
 
 namespace KRPC_test
 {
@@ -22,7 +17,7 @@ namespace KRPC_test
 		private static Stream<Tuple<double, double, double>> dragStream = conn.AddStream(() => vessel.Flight(bodyFrame).Drag);
 		private static Stream<double> velVStream = conn.AddStream(() => vessel.Flight(bodyFrame).VerticalSpeed);
 		private static Stream<double> altStream = conn.AddStream(() => vessel.Flight(bodyFrame).MeanAltitude);
-		private static Stream<Tuple<double, double, double>> position = conn.AddStream(() => vessel.Position(bodyFrame));
+		private static Stream<Tuple<double, double, double>> posStream = conn.AddStream(() => vessel.Position(bodyFrame));
 
 
 		/// <summary>
@@ -32,20 +27,46 @@ namespace KRPC_test
 		public static float ImpactTime()
 		{
 			double velV = velVStream.Get();
-			double altitude = altStream.Get();
+			double altitude = altStream.Get(); //remove 66 later
 			double downAcc = Physics.DownAcc();
-			return (float)((velV + Math.Sqrt(velV * velV + 2 * altitude * downAcc)) / Math.Max(downAcc, 0.001));
+			float time = (float)((velV + Math.Sqrt(velV * velV + 2 * altitude * downAcc)) / Math.Max(downAcc, 0.001));
+			return time;
 		}
+
+		private static double ImpactLocSurfaceHeight()
+		{
+			Vector3 vesselPosition = VectorMath.TupleToVector(posStream.Get());
+			Vector3 newPosition = ImpactPos();
+			double latitude = body.LatitudeAtPosition(VectorMath.VectorToTuple(newPosition), bodyFrame);
+			double longitude = body.LongitudeAtPosition(VectorMath.VectorToTuple(newPosition), bodyFrame);
+			return body.SurfaceHeight(latitude, longitude);
+		}
+		/// <summary>
+		/// Altitude (terrain)
+		/// </summary>
+		/// <returns></returns>
+		public static double RealAltitude()
+		{
+			return altStream.Get() - ImpactLocSurfaceHeight();
+		}
+
+
+		public static Tuple<double,double,double> SurfacePositionAtPosition(Tuple<double, double, double> position)
+		{
+			Tuple<double, double> latLon = LatLonAtPosition(position);
+			return body.SurfacePosition(latLon.Item1, latLon.Item2, bodyFrame);
+		}
+
 		/// <summary>
 		/// Calculate time before the impact with respect of surface elevation.
 		/// </summary>
 		/// <param name="realAltitude"></param>
 		/// <returns>Time in seconds</returns>
-		public static double RealImpactTime(double realAltitude)
+		public static double RealImpactTime()
 		{
 			double velV = velVStream.Get();
 			double downAcc = Physics.DownAcc();
-			return (velV + Math.Sqrt(velV * velV + 2 * realAltitude * downAcc)) / Math.Max(downAcc, 0.001);
+			return (velV + Math.Sqrt(velV * velV + 2 * RealAltitude() * downAcc)) / Math.Max(downAcc, 0.001);
 		}
 		/// <summary>
 		/// Calculates a distance needed to slow down
@@ -53,8 +74,8 @@ namespace KRPC_test
 		/// <returns></returns>
 		public static double BurnDistance()
 		{
-			Vector3 velocity = VectorMath.TupleToVector(velStream.Get()) + 0.001f * VectorMath.TupleToVector(dragStream.Get());
-			return velocity.Length() * velocity.Length() / Physics.MaxA() + 50;
+			Vector3 velocity = VectorMath.TupleToVector(velStream.Get()) + VectorMath.TupleToVector(Physics.DragDeceleration());
+			return velocity.Length() * velocity.Length() / Physics.MaxA();
 		}
 		/// <summary>
 		/// Calculates an impact position based on velocity and maximum acceleration. 
@@ -62,7 +83,7 @@ namespace KRPC_test
 		/// <returns></returns>
 		public static Vector3 ImpactPos()
 		{
-			Vector3 vesselPosition = VectorMath.TupleToVector(position.Get());
+			Vector3 vesselPosition = VectorMath.TupleToVector(posStream.Get());
 			Vector3 velocity = VectorMath.TupleToVector(velStream.Get());
 			return vesselPosition + velocity * ImpactTime();
 		}
@@ -78,34 +99,66 @@ namespace KRPC_test
 			return VectorMath.TupleToVector(body.SurfacePosition(latitude, longitude, bodyFrame));
 
 		}
-		
-		public static Tuple<double, double> LandingSpotLatLang()
+		public static Tuple<double, double> LatLonAtPosition(Tuple<double, double, double> position)
+		{
+			double latitude = body.LatitudeAtPosition(position, body.ReferenceFrame);
+			double longitude = body.LongitudeAtPosition(position, body.ReferenceFrame);
+
+			return Tuple.Create(latitude, longitude);
+		}
+		internal static Vector3 MSLNormal(Tuple<double, double, double> pos)
+		{
+			double latitude = body.LatitudeAtPosition(pos, bodyFrame);
+			double longitude = body.LongitudeAtPosition(pos, bodyFrame);
+			Tuple<double, double, double> landingSpotMSL = body.MSLPosition(latitude, longitude, body.ReferenceFrame);
+			//Spot 1
+			latitude += 1 / 60 / 60 * 20;
+			longitude += 1 / 60 / 60 * 20;
+			Vector3 spotOnePositionMSL = VectorMath.TupleToVector(body.MSLPosition(latitude, longitude, body.ReferenceFrame));
+			//Spot 2										  
+			latitude -= 1.4 / 60 / 60 * 20;
+			longitude += 0.3 / 60 / 60 * 20;
+			Vector3 spotTwoPositionMSL = VectorMath.TupleToVector(body.MSLPosition(latitude, longitude, body.ReferenceFrame));
+			//Spot 3										
+			latitude += 0.4 / 60 / 60 * 20;
+			longitude -= 1.4 / 60 / 60 * 20;
+			Vector3 spotThreePositionMSL = VectorMath.TupleToVector(body.MSLPosition(latitude, longitude, body.ReferenceFrame));
+
+			Vector3 v1MSL = spotTwoPositionMSL - spotOnePositionMSL;
+			Vector3 v2MSL = spotThreePositionMSL - spotOnePositionMSL;
+
+
+			Vector3 n2 = Vector3.Normalize(Vector3.Cross(v1MSL, v2MSL)); // normal to the sea surface
+			return n2;
+		}
+
+		public static Tuple<double, double> LandingSpotLatLong()
 		{
 			Tuple<double, double, double> distanceToTravel = VectorMath.MultiplyByNumber(velStream.Get(), RealTimeToImpact());
-			Tuple<double, double, double> landingPos = VectorMath.Add(distanceToTravel, position.Get()); //predicted landing spot with no regard of surface elevation
+			Tuple<double, double, double> landingPos = VectorMath.Add(distanceToTravel, posStream.Get()); //predicted landing spot with no regard of surface elevation
 			double latitude = body.LatitudeAtPosition(landingPos, body.ReferenceFrame);
 			double longitude = body.LongitudeAtPosition(landingPos, body.ReferenceFrame);
 			return Tuple.Create(latitude, longitude);
 		}
-		public static Vector3 SurfaceNormal(Tuple<double, double> latLan)
+		public static Vector3 SurfaceNormal(Tuple<double, double, double> position)
 		{
-
-			double latitude = latLan.Item1;
-			double longitude = latLan.Item2;
+			Tuple<double, double> latLon = LatLonAtPosition(position);
+			double latitude = latLon.Item1;
+			double longitude = latLon.Item2;
 			//predicted landing spot with regard of surface elevation
-			Tuple<double, double, double> landingSpot = body.SurfacePosition(latitude, longitude, body.ReferenceFrame);
+			//Tuple<double, double, double> landingSpot = body.SurfacePosition(latitude, longitude, body.ReferenceFrame);
 			double spread = 3; //How far away the measures will be taken. Affects precision.
-			//Spot 1
-			latitude = latLan.Item1;
-			longitude = latLan.Item2 + Math.Sqrt(3) / 4 / 60 / 60 * spread;
+												 //Spot 1
+			latitude = latLon.Item1;
+			longitude = latLon.Item2 + Math.Sqrt(3) / 4 / 60 / 60 * spread;
 			Vector3 spotOnePosition = VectorMath.TupleToVector(body.SurfacePosition(latitude, longitude, body.ReferenceFrame));
 			//Spot 2										  
-			latitude = latLan.Item1 - 0.5 / 60 / 60 * spread;
-			longitude = latLan.Item2 - Math.Sqrt(3) / 4 / 60 / 60 * spread;
+			latitude = latLon.Item1 - 0.5 / 60 / 60 * spread;
+			longitude = latLon.Item2 - Math.Sqrt(3) / 4 / 60 / 60 * spread;
 			Vector3 spotTwoPosition = VectorMath.TupleToVector(body.SurfacePosition(latitude, longitude, body.ReferenceFrame));
 			//Spot 3										
-			latitude = latLan.Item1 + 0.5 / 60 / 60 * spread;
-			longitude = latLan.Item2 - Math.Sqrt(3) / 4 / 60 / 60 * spread;
+			latitude = latLon.Item1 + 0.5 / 60 / 60 * spread;
+			longitude = latLon.Item2 - Math.Sqrt(3) / 4 / 60 / 60 * spread;
 			Vector3 spotThreePosition = VectorMath.TupleToVector(body.SurfacePosition(latitude, longitude, body.ReferenceFrame));
 			//These vectors represent the sides of an equilateral triangle. The first two are for setting a normal. The third vector is only needed for visualization.
 			Vector3 v1 = spotTwoPosition - spotOnePosition;
@@ -118,11 +171,12 @@ namespace KRPC_test
 
 			return Vector3.Cross(v1, v2); //normal to the surface that v1 and v2 lie on.
 		}
-		public static double Slope(Vector3 surfaceNormal, Tuple<double, double> latLan)
+		public static double Slope(Vector3 surfaceNormal, Tuple<double, double, double> position)
 		{
 			Vector3 n1 = surfaceNormal;
-			double latitude = latLan.Item1;
-			double longitude = latLan.Item2;
+			Tuple<double, double> latLon = LatLonAtPosition(position);
+			double latitude = latLon.Item1;
+			double longitude = latLon.Item2;
 			//Same as above but for mean Sea level
 			Tuple<double, double, double> landingSpotMSL = body.MSLPosition(latitude, longitude, body.ReferenceFrame);
 			//Spot 1
@@ -151,14 +205,7 @@ namespace KRPC_test
 		/// Gets the height of the impact location.
 		/// </summary>
 		/// <returns></returns>
-		private static double ImpactLocSurfaceHeight()
-		{
-			Vector3 vesselPosition = VectorMath.TupleToVector(position.Get());
-			Vector3 newPosition = ImpactPos();
-			double latitude = body.LatitudeAtPosition(VectorMath.VectorToTuple(newPosition), bodyFrame);
-			double longitude = body.LongitudeAtPosition(VectorMath.VectorToTuple(newPosition), bodyFrame);
-			return body.SurfaceHeight(latitude, longitude);
-		}
+		
 		private static float RealTimeToImpact()
 		{
 			double velV = velVStream.Get();
@@ -175,23 +222,25 @@ namespace KRPC_test
 			while (distanceToBurn < distanceToImpact.Length())
 			{
 				velocity = VectorMath.TupleToVector(velStream.Get());
-				vesselPosition = VectorMath.TupleToVector(position.Get());
+				var position = posStream.Get();
+				vesselPosition = VectorMath.TupleToVector(position);
 
 				distanceToBurn = BurnDistance();
-				Vector3 dist = vesselPosition - RealImpactPos();
-				distanceToImpact = (velocity) * RealTimeToImpact();
+				//Vector3 dist = vesselPosition - RealImpactPos();
+				distanceToImpact = vesselPosition - VectorMath.TupleToVector(Physics.FuturePosition(position,velStream.Get(),ImpactTime()));
+				//distanceToImpact = (velocity) * RealTimeToImpact();
 				double halfCos = Math.Cos(VectorMath.Angle(distanceToImpact, -velocity) / 2);
-				
-				Output.Print(Math.Round(distanceToImpact.Length()) + " | "+ Math.Round(distanceToBurn,2),3);
+
+				//Output.Print(Math.Round(distanceToImpact.Length()) + " | " + Math.Round(distanceToBurn, 2), 3);
 				//Output.Print(distanceToBurn, 2);
-				Output.Print("distance to impact " + dist.Length(),4);
-				Output.Print("drag " + Math.Round(VectorMath.Length(dragStream.Get())),5);
+				//Output.Print("distance to impact " + dist.Length(), 4);
+				//Output.Print("drag " + Math.Round(VectorMath.Length(dragStream.Get())), 5);
 			}
 			OnDecision?.Invoke();
 
 
 		}
-	
+
 		public delegate void DecisionHandler();
 		public static event DecisionHandler OnDecision;
 		/// <summary>

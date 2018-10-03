@@ -103,10 +103,32 @@ namespace KRPC_test
 			impactPos = position;
 			return position;
 		}
-		//public static void GetImpactPositionTh(Tuple<double, double, double> position, Tuple<double, double, double> velocity, double time)
-		//{
-		//	Thread thread = new Thread(() => GetImpactPosition(position, velocity, time));
-		//	thread.Start();
-		//}
+		/// <summary>
+		/// Position of the vessel in given time.
+		/// </summary>
+		public static Tuple<double, double, double> GetImpactPosition(Stream<Tuple3> positionStream, Stream<Tuple3> velocityStream)
+		{
+			var position = positionStream.Get();
+			var velocity = velocityStream.Get();
+			for (int t = 0; t < 50; t++)
+			{
+				position = Vectors.Add(position, velocity);
+				velocity = GetNextVelocity(position, velocity);
+				var surfacePos = Radar.SurfacePositionAtPosition(position);
+				//If next position is below surface, return surface position.
+				if (currentBody.AltitudeAtPosition(position, bodyFrame) < currentBody.AltitudeAtPosition(surfacePos, bodyFrame))
+				{
+					position = surfacePos;
+					break;
+				}
+			}
+			impactPos = position;
+			return position;
+		}
+		public static void GetImpPosThread(Stream<Tuple3> positionStream, Stream<Tuple3> velocityStream)
+		{
+			Thread thread = new Thread(() => GetImpactPosition(positionStream, velocityStream));
+			thread.Start();
+		}
 	}
 }

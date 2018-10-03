@@ -1,5 +1,4 @@
-﻿using Compute;
-using KRPC.Client;
+﻿using KRPC.Client;
 using KRPC.Client.Services.SpaceCenter;
 using System;
 using System.Collections.Generic;
@@ -86,7 +85,7 @@ namespace KRPC_test
 					 //Staging
 					 if (currentStage.Get() > 0)
 					 {
-						  Calculations.Stage(vessel);
+						  Readings.Stage(vessel);
 
 
 					 }
@@ -107,18 +106,18 @@ namespace KRPC_test
 				vessel.AutoPilot.TargetDirection = Tuple.Create(0.0, 1.0, 0.0);
 
 				//Circularisation
-				Calculations.AddNode(vessel, ut);
+				Readings.AddNode(vessel, ut);
 				flightMode = 3;
 				List<Node> nodes = new List<Node>(vessel.Control.Nodes);
 				Node node = nodes[0];
 
 				// Calculate burn time (using rocket equation)
-				double burnTime = Calculations.GetBurnTime(vessel, node);
+				double burnTime = Readings.GetBurnTime(vessel, node);
 
 				// Warp to burn
 				Console.WriteLine("Waiting until circularization burn");
 				double burnUT = ut.Get() + node.TimeTo - burnTime / 2;
-				Calculations.WarpToNode(conn, altitude, node, burnTime + 4, burnUT);
+				Readings.WarpToNode(conn, altitude, node, burnTime + 4, burnUT);
 
 				//Orient to node prograde
 				vessel.AutoPilot.ReferenceFrame = node.ReferenceFrame;
@@ -131,7 +130,7 @@ namespace KRPC_test
 					 //do nothing
 				}
 				vessel.Control.RCS = false;
-				Calculations.ExeNode(vessel);
+				Readings.ExeNode(vessel);
 
 
 

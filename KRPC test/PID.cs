@@ -11,25 +11,20 @@ namespace KRPC_test
 {
 	static class PID
 	{
-
-		private static double kP = 0.0;
-		private static double kI = 0.0;
-		private static double kD = 0.0;
 		private static double p = 0.001;
 		private static double i = 0.00;
 		private static double d = 0.00;
-		private static double minOut = 0;
-		private static double maxOut;
+		private static readonly double minOut = 0;
 		private static double lastInput = 0;
 		private static bool calculateD = false;
 		private static DateTime lastTime = DateTime.Now;
-		public static double MaxOut { get => maxOut; set => maxOut = value; }
+		public static double MaxOut { get; set; }
 		public static double SetPoint { get; set; }
 		public static double ClampI { get; set; } = 1;
 		public static bool Enabled { get; set; }
-		public static double KP { get => kP; set => kP = value; }
-		public static double KI { get => kI; set => kI = value; }
-		public static double KD { get => kD; set => kD = value; }
+		public static double KP { get; set; } = 0.728;
+		public static double KI { get; set; } = 1.093;
+		public static double KD { get; set; } = 0.0323;
 
 		////private static ReferenceFrame padRef = RefFrames.CreateLaunchPadRef(conn);
 		//private static Connection conn = new Connection("PID");
@@ -50,12 +45,7 @@ namespace KRPC_test
 
 		}
 
-		//public PID(double _p = 0.0, double _i = 0.0, double _d = 0.00)
-		//{
-		//	kP = _p;
-		//	kI = _i;
-		//	kD = _d;
-		//}
+		
 
 
 		public static Tuple<double, double, double> GetCoefficients()
@@ -72,7 +62,7 @@ namespace KRPC_test
 				{
 					maxA = thrust.Get() / mass.Get();
 					maxTWR = maxA / 9.81;
-					maxOut = maxTWR;
+					MaxOut = maxTWR;
 					velV = velocity.Get();
 					DateTime now = DateTime.Now;
 					TimeSpan timePassed = now - lastTime;
@@ -93,9 +83,9 @@ namespace KRPC_test
 					calculateD = true;
 
 					double output = KP * p + KI * i - KD * d;
-					if (output > maxOut)
+					if (output > MaxOut)
 					{
-						output = maxOut;
+						output = MaxOut;
 					}
 					else if (output < minOut)
 					{

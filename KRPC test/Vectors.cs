@@ -1,12 +1,9 @@
-﻿using KRPC.Client;
-using KRPC.Client.Services.Drawing;
-using KRPC.Client.Services.SpaceCenter;
-using System;
+﻿using System;
 using System.Numerics;
 
 namespace KRPC_test
 {
-	static class VectorMath
+	static class Vectors
 	{
 
 		public static Tuple<double, double, double> Subtract(Tuple<double, double, double> t1, Tuple<double, double, double> t2)
@@ -151,9 +148,13 @@ namespace KRPC_test
 
 
 
-		public static Vector3 TupleToVector(Tuple<double, double, double> tuple)
+		public static Vector3 ToVector(Tuple<double, double, double> tuple)
 		{
 			return new Vector3((float)tuple.Item1, (float)tuple.Item2, (float)tuple.Item3);
+		}
+		public static Tuple<double, double, double> ToTuple(Vector3 t1)
+		{
+			return Tuple.Create((double)t1.X, (double)t1.Y, (double)t1.Z);
 		}
 		public static Vector3 GetGroundVector(Tuple<double, double, double> tuple)
 		{
@@ -162,10 +163,6 @@ namespace KRPC_test
 		public static Vector3 GetGroundVector(Vector3 v)
 		{
 			return new Vector3(0, (float)v.Y, (float)v.Z);
-		}
-		public static Tuple<double, double, double> VectorToTuple(Vector3 t1)
-		{
-			return Tuple.Create((double)t1.X, (double)t1.Y, (double)t1.Z);
 		}
 		/// <summary>
 		/// Projects the first vector on the second.
@@ -188,83 +185,7 @@ namespace KRPC_test
 
 		}
 
-		public static double Slope(Connection connection, Vector3 position)
-		{
-			CelestialBody body = connection.SpaceCenter().ActiveVessel.Orbit.Body;
-			var vessel = connection.SpaceCenter().ActiveVessel;
-			double latitude = body.LatitudeAtPosition(VectorMath.VectorToTuple(position), body.ReferenceFrame);
-			double longtitude = body.LongitudeAtPosition(VectorMath.VectorToTuple(position), body.ReferenceFrame);
-			Tuple<double, double, double> landingSpot = body.SurfacePosition(latitude, longtitude, body.ReferenceFrame);
-			//Spot 1
-			latitude += 1 / 60 / 60 * 5;
-			longtitude += 1 / 60 / 60 * 5;
-			Vector3 spotOnePosition = TupleToVector(body.SurfacePosition(latitude, longtitude, body.ReferenceFrame));
-			//Spot 2										  
-			latitude -= 1.4 / 60 / 60 * 5;
-			longtitude += 0.3 / 60 / 60 * 5;
-			Vector3 spotTwoPosition = TupleToVector(body.SurfacePosition(latitude, longtitude, body.ReferenceFrame));
-			//Spot 3										
-			latitude += 0.4 / 60 / 60 * 5;
-			longtitude -= 1.4 / 60 / 60 * 5;
-			Vector3 spotThrePosition = TupleToVector(body.SurfacePosition(latitude, longtitude, body.ReferenceFrame));
-
-			Vector3 v1 = spotTwoPosition - spotOnePosition;
-			Vector3 v2 = spotThrePosition - spotOnePosition;
-
-			Vector3 n1 = Vector3.Cross(v1, v2);
-			//Mean See level
-			Tuple<double, double, double> landingSpotMSL = body.MSLPosition(latitude, longtitude, body.ReferenceFrame);
-			//Spot 1
-			latitude += 1 / 60 / 60 * 5;
-			longtitude += 1 / 60 / 60 * 5;
-			Vector3 spotOnePositionMSL = TupleToVector(body.MSLPosition(latitude, longtitude, body.ReferenceFrame));
-			//Spot 2										  
-			latitude -= 1.4 / 60 / 60 * 5;
-			longtitude += 0.3 / 60 / 60 * 5;
-			Vector3 spotTwoPositionMSL = TupleToVector(body.MSLPosition(latitude, longtitude, body.ReferenceFrame));
-			//Spot 3										
-			latitude += 0.4 / 60 / 60 * 5;
-			longtitude -= 1.4 / 60 / 60 * 5;
-			Vector3 spotThrePositionMSL = TupleToVector(body.MSLPosition(latitude, longtitude, body.ReferenceFrame));
-
-			Vector3 v1MSL = spotTwoPositionMSL - spotOnePositionMSL;
-			Vector3 v2MSL = spotThrePositionMSL - spotOnePositionMSL;
-
-
-			Vector3 n2 = Vector3.Cross(v1MSL, v2MSL);
-			return Angle(n1, n2);
-		}
-
-		public static void Visualize(Connection conn, Tuple<double, double, double> start, Vector3 vector, ReferenceFrame frame)
-		{
-			var t1 = VectorToTuple(vector);
-			conn.Drawing().AddLine(start, MultiplyByNumber(t1, 1), frame);
-			//conn.Drawing().Clear();
-
-
-		}
-		public static void Visualize(Connection conn, Vector3 start, Vector3 vector, ReferenceFrame frame)
-		{
-
-
-			var zero = VectorToTuple(start);
-			var t1 = VectorToTuple(vector);
-			conn.Drawing().AddLine(zero, t1, frame);
-			System.Threading.Thread.Sleep(50);
-
-			//conn.Drawing().Clear();
-		}
-		public static void Visualize(Connection conn, Vector3 vector, ReferenceFrame frame)
-		{
-
-
-			var zero = Tuple.Create(0.0, 0.0, 0.0);
-			var t1 = VectorToTuple(vector);
-			conn.Drawing().AddLine(zero, t1, frame);
-			System.Threading.Thread.Sleep(50);
-
-			//conn.Drawing().Clear();
-		}
+		
 		/// <summary>
 		/// Check if given tuples are equal withing specified tolerance
 		/// </summary>

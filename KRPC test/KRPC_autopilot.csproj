@@ -32,11 +32,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Compute">
-      <HintPath>..\..\Compute\Compute\bin\Release\Compute.dll</HintPath>
-    </Reference>
     <Reference Include="Google.Protobuf, Version=3.5.1.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
       <HintPath>..\packages\Google.Protobuf.3.5.1\lib\net45\Google.Protobuf.dll</HintPath>
+    </Reference>
+    <Reference Include="KRPC">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\kRPC\KRPC.dll</HintPath>
     </Reference>
     <Reference Include="KRPC.Client, Version=0.4.5.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\KRPC.Client.0.4.5\lib\net45\KRPC.Client.dll</HintPath>
@@ -57,6 +57,8 @@
   <ItemGroup>
     <Compile Include="altPID.cs" />
     <Compile Include="Body.cs" />
+    <Compile Include="Calculations.cs" />
+    <Compile Include="Functions.cs" />
     <Compile Include="Output.cs" />
     <Compile Include="Physics.cs" />
     <Compile Include="PID.cs" />
@@ -66,12 +68,13 @@
     <Compile Include="Radar.cs" />
     <Compile Include="RefFrames.cs" />
     <Compile Include="TestClass.cs" />
-    <Compile Include="VectorMath.cs" />
+    <Compile Include="Trajectories.cs" />
+    <Compile Include="Vectors.cs" />
+    <Compile Include="Visual.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
-    <None Include="Readme.md" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

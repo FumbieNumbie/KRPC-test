@@ -153,7 +153,7 @@ namespace KRPC_test
 				Stream<double> apoapsis = conn.AddStream(() => vessel.Orbit.ApoapsisAltitude);
 				Stream<int> currentStage = conn.AddStream(() => vessel.Control.CurrentStage);
 				Stream<float> availableThrust = conn.AddStream(() => vessel.AvailableThrust);
-				Stream<float> maxThrust = conn.AddStream(() => vessel.MaxThrust);
+				Stream<float> maxThrust = conn.AddStream(() => vessel.MaxThrust); // Maxthrust can be read only once per staging
 				var nextStageResources = vessel.ResourcesInDecoupleStage(stage: currentStage.Get() - 2, cumulative: false);
 
 				double alpha = 90;
@@ -171,6 +171,8 @@ namespace KRPC_test
 						vessel.Control.ActivateNextStage();
 						flightMode = 1;
 					}
+                    //Control twr
+
 					//Turn
 					if (flightMode == 1)
 					{

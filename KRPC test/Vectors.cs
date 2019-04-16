@@ -152,7 +152,8 @@ namespace KRPC_test
 		{
 			return new Vector3((float)tuple.Item1, (float)tuple.Item2, (float)tuple.Item3);
 		}
-		public static Tuple<double, double, double> ToTuple(Vector3 t1)
+        
+        public static Tuple<double, double, double> ToTuple(Vector3 t1)
 		{
 			return Tuple.Create((double)t1.X, (double)t1.Y, (double)t1.Z);
 		}

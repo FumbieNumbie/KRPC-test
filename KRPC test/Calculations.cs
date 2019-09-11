@@ -4,7 +4,7 @@ using KRPC.Client;
 using KRPC.Client.Services.SpaceCenter;
 
 
-namespace KRPC_test
+namespace KRPC_autopilot
 {
     public class Readings
     {

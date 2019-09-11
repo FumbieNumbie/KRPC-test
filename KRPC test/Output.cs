@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace KRPC_test
+namespace KRPC_autopilot
 {
 	class Output
 	{

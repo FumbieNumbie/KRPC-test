@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Numerics;
 
-namespace KRPC_test
+namespace KRPC_autopilot
 {
 	static class Vectors
 	{

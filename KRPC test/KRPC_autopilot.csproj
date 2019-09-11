@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{8DEAF008-0035-4260-914A-F384CA1D4DA2}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>KRPC_test</RootNamespace>
-    <AssemblyName>KRPC test</AssemblyName>
+    <RootNamespace>KRPC_autopilot</RootNamespace>
+    <AssemblyName>KRPC autopilot</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -61,7 +61,11 @@
     <Compile Include="altPID.cs" />
     <Compile Include="Body.cs" />
     <Compile Include="Calculations.cs" />
+    <Compile Include="CommonData.cs" />
+    <Compile Include="ExtentionMethods.cs" />
     <Compile Include="Functions.cs" />
+    <Compile Include="Functions.Landing.cs" />
+    <Compile Include="Functions.Launch.cs" />
     <Compile Include="Output.cs" />
     <Compile Include="Physics.cs" />
     <Compile Include="PID.cs" />
@@ -71,7 +75,7 @@
     <Compile Include="Radar.cs" />
     <Compile Include="RefFrames.cs" />
     <Compile Include="TestClass.cs" />
-    <Compile Include="Trajectories.cs" />
+    <Compile Include="UserInterface.cs" />
     <Compile Include="Vectors.cs" />
     <Compile Include="Visual.cs" />
   </ItemGroup>

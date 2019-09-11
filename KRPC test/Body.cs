@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KRPC_test
+namespace KRPC_autopilot
 {
     class Body
     {

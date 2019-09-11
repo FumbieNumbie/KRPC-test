@@ -7,7 +7,7 @@ using System.Numerics;
 using System.Threading;
 using System.Windows.Forms.DataVisualization.Charting;
 
-namespace KRPC_test
+namespace KRPC_autopilot
 {
     partial class Program
     {
@@ -19,15 +19,12 @@ namespace KRPC_test
         /// 
         static void Main(string[] args)
         {
-            Connection conn = new Connection("Main");
+            UserInterface ui = new UserInterface();
+            ui.Enable();
+            //Connection conn = new Connection("Main");
             //Vessel vessel = conn.SpaceCenter().ActiveVessel;
-            //Functions.Landing.Land();
-            //Functions.Launch.Equatorial();
-            while (true)
-            {
-                Vector3 surfaceNormal = Radar.SurfaceNormal();
-                //Thread.Sleep(100);
-            }
+
+            Functions.Landing.Land();
             Environment.Exit(0);
         }
     }

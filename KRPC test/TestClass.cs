@@ -6,7 +6,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KRPC_test
+namespace KRPC_autopilot
 {
 	 class TestClass
 	 {
